@@ -8,7 +8,7 @@ on:
       - 'v*.*.*'
 
 env:
-  IMAGE_NAME: ghcr.io/kitconcept/docker-stack-deploy
+  IMAGE_NAME: ghcr.io/evgeniy-krivenko/docker-stack-deploy
 
 jobs:
 
