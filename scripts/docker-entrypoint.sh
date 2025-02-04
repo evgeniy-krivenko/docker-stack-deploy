@@ -29,23 +29,32 @@ configure_ssh_key() {
 }
 
 configure_env_file() {
-  if [ "${DEBUG}" != "0" ]; then
-      pwd
-      ls -la
-    fi
-  cat "$ENV_FILE" > "${ENV_FILE_PATH}"
-  env_file_len=$(grep -v '^#' ${ENV_FILE_PATH}|grep -v '^$' -c)
-  if [[ $env_file_len -gt 0 ]]; then
-    echo "Environment Variables: Additional values"
-    if [ "${DEBUG}" != "0" ]; then
-      echo "Environment vars before: $(env|wc -l)"
-    fi
-    # shellcheck disable=SC2046
-    export $(grep -v '^#' ${ENV_FILE_PATH} | grep -v '^$' | xargs -d '\n')
-    if [ "${DEBUG}" != "0" ]; then
-      echo "Environment vars after: $(env|wc -l)"
-    fi
+  if [ -n "${ENV_FILE}" ];then
+    echo -e "\u001b[36mSourcing Environment File: ${ENV_FILE}"
+    stat "${ENV_FILE}"
+    set -a
+    # shellcheck disable=SC1090
+    source "${ENV_FILE}"
+    # echo TRAEFIK_HOST: "${TRAEFIK_HOST}"
+    # export ENV_FILE="${INPUT_ENV_FILE}"
   fi
+  # if [ "${DEBUG}" != "0" ]; then
+  #     pwd
+  #     ls -la
+  # fi
+  # cat "$ENV_FILE" > "${ENV_FILE_PATH}"
+  # env_file_len=$(grep -v '^#' ${ENV_FILE_PATH}|grep -v '^$' -c)
+  # if [[ $env_file_len -gt 0 ]]; then
+  #   echo "Environment Variables: Additional values"
+  #   if [ "${DEBUG}" != "0" ]; then
+  #     echo "Environment vars before: $(env|wc -l)"
+  #   fi
+  #   # shellcheck disable=SC2046
+  #   export $(grep -v '^#' ${ENV_FILE_PATH} | grep -v '^$' | xargs -d '\n')
+  #   if [ "${DEBUG}" != "0" ]; then
+  #     echo "Environment vars after: $(env|wc -l)"
+  #   fi
+  # fi
 }
 
 configure_ssh_host() {
