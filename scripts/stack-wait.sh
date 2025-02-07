@@ -71,7 +71,16 @@ print_service_logs() {
   fi
 }
 get_service_type() {
-  docker service inspect --format '{{.Spec.Mode}}' "$1" | cut -d'=' -f1
+    local service_name="$1"
+    local mode
+
+    mode=$(docker service inspect --format '{{.Spec.Mode.ReplicatedJob}}' "$service_name")
+
+    if [[ "$mode" != "<nil>" ]]; then
+        echo "replicated-job"
+    else
+        echo "other" 
+    fi
 }
 
 while getopts 'f:hn:p:rs:t:' opt; do
@@ -122,15 +131,15 @@ while [ "$stack_done" != "1" ]; do
     # identify/report current state
     if [ "$service_done" != "2" ]; then
       if [ "$service_type" = "replicated-job" ]; then
-        job_state=$(docker service inspect -f '{{.JobStatus.JobIteration.State}}' "$service_id")
+        job_state=$(docker service ls --format '{{.Replicas}}' --filter "id=$service_id" | cut -d' ' -f3 | cut -d')' -f1)
         case "$job_state" in
           running)
             service_done=0
             state="job running"
             ;;
-          complete)
+          completed)
             service_done=1
-            state="job complete"
+            state="completed"
             ;;
           failed)
             service_done=2
