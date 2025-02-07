@@ -70,6 +70,9 @@ print_service_logs() {
     done
   fi
 }
+get_service_type() {
+  docker service inspect --format '{{.Spec.Mode}}' "$1" | cut -d'=' -f1
+}
 
 while getopts 'f:hn:p:rs:t:' opt; do
   case $opt in
@@ -99,6 +102,7 @@ while [ "$stack_done" != "1" ]; do
   for service_id in ${service_ids}; do
     service_done=1
     service=$(docker service inspect --format '{{.Spec.Name}}' "$service_id")
+    service_type=$(get_service_type "$service_id")
 
     # hardcode a "deployed" state when UpdateStatus is not defined
     state=$(docker service inspect -f '{{if .UpdateStatus}}{{.UpdateStatus.State}}{{else}}deployed{{end}}' "$service_id")
@@ -117,13 +121,35 @@ while [ "$stack_done" != "1" ]; do
 
     # identify/report current state
     if [ "$service_done" != "2" ]; then
-      replicas=$(docker service ls --format '{{.Replicas}}' --filter "id=$service_id" | cut -d' ' -f1)
-      current=$(echo "$replicas" | cut -d/ -f1)
-      target=$(echo "$replicas" | cut -d/ -f2)
-      if [ "$current" != "$target" ]; then
-        # actively replicating service
-        service_done=0
-        state="replicating $replicas"
+      if [ "$service_type" = "replicated-job" ]; then
+        job_state=$(docker service inspect -f '{{.JobStatus.JobIteration.State}}' "$service_id")
+        case "$job_state" in
+          running)
+            service_done=0
+            state="job running"
+            ;;
+          complete)
+            service_done=1
+            state="job complete"
+            ;;
+          failed)
+            service_done=2
+            state="job failed"
+            ;;
+          *)
+            service_done=0
+            state="job $job_state"
+            ;;
+        esac
+      else
+        replicas=$(docker service ls --format '{{.Replicas}}' --filter "id=$service_id" | cut -d' ' -f1)
+        current=$(echo "$replicas" | cut -d/ -f1)
+        target=$(echo "$replicas" | cut -d/ -f2)
+        if [ "$current" != "$target" ]; then
+          # actively replicating service
+          service_done=0
+          state="replicating $replicas"
+        fi
       fi
     fi
     service_state "$service" "$state"
